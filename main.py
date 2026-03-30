@@ -5,8 +5,9 @@ from typing import List, Tuple
 
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
-SQUARE_SIZE = 40
-SQUARE_COUNT = 10
+MIN_SQUARE_SIZE = 20
+MAX_SQUARE_SIZE = 60
+SQUARE_COUNT = 100
 FPS = 60
 
 @dataclass
@@ -25,10 +26,11 @@ def initialize_pygame() -> pygame.Surface:
 def create_squares(count: int) -> List[Square]:
     squares: List[Square] = []
     for _ in range(count):
+        SQUARE_SIZE = random.randint(MIN_SQUARE_SIZE, MAX_SQUARE_SIZE)
         x = random.randint(0, SCREEN_WIDTH - SQUARE_SIZE)
         y = random.randint(0, SCREEN_HEIGHT - SQUARE_SIZE)
-        vx = random.choice([-3, -2, -1, 1, 2, 3])
-        vy = random.choice([-3, -2, -1, 1, 2, 3])
+        vx = 100 / SQUARE_SIZE 
+        vy = 100 / SQUARE_SIZE 
         rect = pygame.Rect(x, y, SQUARE_SIZE, SQUARE_SIZE)
         squares.append(Square(rect=rect, velocity=(vx, vy)))
     return squares
@@ -48,11 +50,11 @@ def update_squares(squares: List[Square]) -> None:
 
         if square.rect.left < 0 or square.rect.right > SCREEN_WIDTH:
             square.velocity = (-square.velocity[0], square.velocity[1])
-            square.rect.x = max(0, min(square.rect.x, SCREEN_WIDTH - SQUARE_SIZE))
+            square.rect.x = max(0, min(square.rect.x, SCREEN_WIDTH - square.rect.size[0]))
 
         if square.rect.top < 0 or square.rect.bottom > SCREEN_HEIGHT:
             square.velocity = (square.velocity[0], -square.velocity[1])
-            square.rect.y = max(0, min(square.rect.y, SCREEN_HEIGHT - SQUARE_SIZE))
+            square.rect.y = max(0, min(square.rect.y, SCREEN_HEIGHT - square.rect.size[0]))
 
 
 def draw_squares(screen: pygame.Surface, squares: List[Square]) -> None:
