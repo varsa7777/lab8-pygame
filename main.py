@@ -91,13 +91,17 @@ def update_squares(squares: List[Square]) -> None:
         square.rect.x += random.randint(-1, 1)
         square.rect.y += random.randint(-1, 1)
 
-        if square.rect.left < 0 or square.rect.right > SCREEN_WIDTH:
-            square.velocity = (-square.velocity[0], square.velocity[1])
-            square.rect.x = max(0, min(square.rect.x, SCREEN_WIDTH - square.rect.size[0]))
+        if square.rect.left < 0:
+            square.rect.x = SCREEN_WIDTH
+        
+        if square.rect.right > SCREEN_WIDTH:
+            square.rect.x = 0
 
-        if square.rect.top < 0 or square.rect.bottom > SCREEN_HEIGHT:
-            square.velocity = (square.velocity[0], -square.velocity[1])
-            square.rect.y = max(0, min(square.rect.y, SCREEN_HEIGHT - square.rect.size[0]))
+        if square.rect.bottom < 0:
+            square.rect.y = SCREEN_HEIGHT
+
+        if square.rect.top > SCREEN_HEIGHT:
+            square.rect.y = 0
 
 
 def draw_squares(screen: pygame.Surface, squares: List[Square]) -> None:
