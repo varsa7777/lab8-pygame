@@ -15,6 +15,7 @@ FPS = 60
 class Square:
     rect: pygame.Rect
     velocity: Tuple[int, int]
+    size: int
 
 
 def initialize_pygame() -> pygame.Surface:
@@ -23,33 +24,24 @@ def initialize_pygame() -> pygame.Surface:
     pygame.display.set_caption("Moving Squares")
     return screen
 
+def make_square(size: int) -> "Square":
+    x = random.randint(0, SCREEN_WIDTH - size)
+    y = random.randint(0, SCREEN_HEIGHT - size)
+    speed = 50 / size
+    vx = speed * random.choice([-1, 1])
+    vy = speed * random.choice([-1, 1])
+    rect = pygame.Rect(x, y, size, size)
+    return Square(rect=rect, velocity=(vx, vy), size=size)
+
 
 def create_squares(count: int) -> List[Square]:
     squares: List[Square] = []
     for _ in range(5):
-        SQUARE_SIZE = 25
-        x = random.randint(0, SCREEN_WIDTH - SQUARE_SIZE)
-        y = random.randint(0, SCREEN_HEIGHT - SQUARE_SIZE)
-        vx = 30 / SQUARE_SIZE 
-        vy = 30 / SQUARE_SIZE 
-        rect = pygame.Rect(x, y, SQUARE_SIZE, SQUARE_SIZE)
-        squares.append(Square(rect=rect, velocity=(vx, vy)))
+        squares.append(make_square(25))
     for _ in range(10):
-        SQUARE_SIZE = 10
-        x = random.randint(0, SCREEN_WIDTH - SQUARE_SIZE)
-        y = random.randint(0, SCREEN_HEIGHT - SQUARE_SIZE)
-        vx = 30 / SQUARE_SIZE 
-        vy = 30 / SQUARE_SIZE 
-        rect = pygame.Rect(x, y, SQUARE_SIZE, SQUARE_SIZE)
-        squares.append(Square(rect=rect, velocity=(vx, vy)))
+        squares.append(make_square(10))
     for _ in range(30):
-        SQUARE_SIZE = 4
-        x = random.randint(0, SCREEN_WIDTH - SQUARE_SIZE)
-        y = random.randint(0, SCREEN_HEIGHT - SQUARE_SIZE)
-        vx = 30 / SQUARE_SIZE 
-        vy = 30 / SQUARE_SIZE 
-        rect = pygame.Rect(x, y, SQUARE_SIZE, SQUARE_SIZE)
-        squares.append(Square(rect=rect, velocity=(vx, vy)))
+        squares.append(make_square(4))
     return squares
 
 
@@ -75,7 +67,7 @@ def update_squares(squares: List[Square]) -> None:
                     closest = other
         
         # If there's a close bigger square, flee from it
-        if closest and min_dist < 100:
+        if closest and min_dist < 30:
             dx = square.rect.centerx - closest.rect.centerx
             dy = square.rect.centery - closest.rect.centery
             dist = math.hypot(dx, dy)
@@ -103,6 +95,21 @@ def update_squares(squares: List[Square]) -> None:
         if square.rect.top > SCREEN_HEIGHT:
             square.rect.y = 0
 
+        eaten = set()
+        for i, a in enumerate(squares):
+            for j, b in enumerate(squares):
+                if i >= j or i in eaten or j in eaten:
+                    continue
+                if check_collision(a, b):
+                    if a.rect.size[0] > b.rect.size[0]:
+                        eaten.add(j)
+                    elif b.rect.size[0] > a.rect.size[0]:
+                        eaten.add(i)
+        
+        for i in eaten:
+            old = squares[i]
+            squares[i] = make_square(old.size)
+
 
 def draw_squares(screen: pygame.Surface, squares: List[Square]) -> None:
     screen.fill((30, 30, 30))
@@ -111,7 +118,7 @@ def draw_squares(screen: pygame.Surface, squares: List[Square]) -> None:
     pygame.display.flip()
 
 def check_collision(a: Square, b:Square) -> bool:
-    return a.collideRect(b)
+    return a.rect.colliderect(b)
 
 def main() -> None:
     screen = initialize_pygame()
