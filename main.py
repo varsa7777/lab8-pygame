@@ -26,12 +26,28 @@ def initialize_pygame() -> pygame.Surface:
 
 def create_squares(count: int) -> List[Square]:
     squares: List[Square] = []
-    for _ in range(count):
-        SQUARE_SIZE = random.randint(MIN_SQUARE_SIZE, MAX_SQUARE_SIZE)
+    for _ in range(5):
+        SQUARE_SIZE = 25
         x = random.randint(0, SCREEN_WIDTH - SQUARE_SIZE)
         y = random.randint(0, SCREEN_HEIGHT - SQUARE_SIZE)
-        vx = 100 / SQUARE_SIZE 
-        vy = 100 / SQUARE_SIZE 
+        vx = 30 / SQUARE_SIZE 
+        vy = 30 / SQUARE_SIZE 
+        rect = pygame.Rect(x, y, SQUARE_SIZE, SQUARE_SIZE)
+        squares.append(Square(rect=rect, velocity=(vx, vy)))
+    for _ in range(10):
+        SQUARE_SIZE = 10
+        x = random.randint(0, SCREEN_WIDTH - SQUARE_SIZE)
+        y = random.randint(0, SCREEN_HEIGHT - SQUARE_SIZE)
+        vx = 30 / SQUARE_SIZE 
+        vy = 30 / SQUARE_SIZE 
+        rect = pygame.Rect(x, y, SQUARE_SIZE, SQUARE_SIZE)
+        squares.append(Square(rect=rect, velocity=(vx, vy)))
+    for _ in range(30):
+        SQUARE_SIZE = 4
+        x = random.randint(0, SCREEN_WIDTH - SQUARE_SIZE)
+        y = random.randint(0, SCREEN_HEIGHT - SQUARE_SIZE)
+        vx = 30 / SQUARE_SIZE 
+        vy = 30 / SQUARE_SIZE 
         rect = pygame.Rect(x, y, SQUARE_SIZE, SQUARE_SIZE)
         squares.append(Square(rect=rect, velocity=(vx, vy)))
     return squares
