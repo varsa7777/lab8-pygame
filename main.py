@@ -9,7 +9,9 @@ SCREEN_HEIGHT = 600
 MIN_SQUARE_SIZE = 20
 MAX_SQUARE_SIZE = 100
 SQUARE_COUNT = 20
+TRAILS_LENGTH = 30
 FPS = 60
+GROWTH_SPEED = 500
 
 @dataclass
 class Square:
@@ -113,6 +115,11 @@ def update_squares(squares: List[Square]) -> None:
         for i in eaten:
             old = squares[i]
             squares[i] = make_square(old.size)
+
+def draw_trail(square):
+    color = (100,255,255)
+    pygame.draw.line(pygame.Surface, color, start_pos, end_pos, 2)
+
 
 
 def draw_squares(screen: pygame.Surface, squares: List[Square]) -> None:
