@@ -1,85 +1,18 @@
 ---
-name: journal-logger
-description: Logs user interactions with Copilot into JOURNAL.md using verbatim prompt text, runtime metadata, and reconciliation.
-argument-hint: Run after each user turn with a structured payload containing the exact prompt text and current runtime metadata.
+description: 'Updates the JOURNAL.md file after each prompt.'
+
+tools: [vscode, execute, read, agent, browser, edit, search, web, ms-python.python/getPythonEnvironmentInfo, ms-python.python/getPythonExecutableCommand, ms-python.python/installPythonPackage, ms-python.python/configurePythonEnvironment, todo]
 ---
-
-## Invocation Contract
-
-The caller must pass the original user prompt as structured data, not only a wrapper instruction to log it.
-
-Expected fields in the subagent prompt:
-- `User Prompt: <exact verbatim user prompt>`
-- `CoPilot Mode: <Ask|Plan|Edit|Agent>`
-- `CoPilot Model: <actual runtime model name>`
-- `Socratic Mode: <ON|OFF>`
-- `Changes Made: <concise summary>`
-- `Context and Reasons for Changes: <concise context/reasoning>`
-
-Strongly recommended fields for reliable reconciliation:
-- `Recent User Turns:` followed by a newline-delimited list of recent user prompts with mode labels, newest first.
-- `Reconciliation Window Note:` concise note describing how many recent turns were provided by the caller.
-
-`Recent User Turns:` line format (authoritative when present):
-- `- [<Mode>] <verbatim prompt text>` where `<Mode>` is one of `Ask|Plan|Edit|Agent`.
-- Treat each listed line as a distinct candidate interaction during reconciliation, even if that turn is not visible in current chat context.
-- Preserve prompt text exactly as provided after the mode label when writing missing entries.
-- For missing-entry backfill, set `CoPilot Mode` from each line's `<Mode>` label, not from the current runtime mode.
-
-If wrapper text surrounds these fields, ignore the wrapper text and use only the structured field values.
-
-Never log the subagent instruction itself, such as `Log the current interaction where the user asked...`.
-If the `User Prompt:` field is missing, stop and report an invocation error instead of writing a bad entry.
-
 ## Journal Logger Agent Version
-- Agent Version: 2.1
+- Agent Version: 2.3
 
-## Scope and Ownership
+## Purpose
+After each prompt, update the JOURNAL.md file in the repository root with a new entry according to the following template. If JOURNAL.md does not exist, create it at the root of the repository before logging the entry.
 
-This file is the single source of truth for journaling mechanics:
-- reconciliation
-- timestamps
-- duplicate prevention
-- prepend order
-- entry template
-
-## Execution Rules
-
-- Complete logging in the same active request whenever possible.
-- Do not launch an extra request only to confirm logging.
-- Use one focused read of top `JOURNAL.md` window (default 75 lines) and one write for normal logging.
-- Track the last-logged conversation turn in session memory.
-
-## Fast-Path Skip (check before reconciliation)
-
-Before doing any reconciliation:
-1. Read only the top entry of `JOURNAL.md` (first 15 lines).
-2. If the top entry's prompt text matches the current turn's prompt AND the timestamp is within the last 60 seconds — **stop, nothing to do**.
-
-**Important**: Do NOT skip reconciliation based on turn sequencing. Ask-mode turns are never auto-logged (Copilot cannot invoke subagents in Ask mode), so gaps always exist between Agent-mode invocations. Reconciliation is always required unless step 2 matches.
-
-## Mandatory Reconciliation Workflow
-
-Run unless the fast-path duplicate check (step 2 above) matched:
-1. Read top 75 lines of `JOURNAL.md`.
-2. Compare with **all** recent visible conversation turns (Ask, Plan, Edit, Agent).
-3. If `Recent User Turns:` is provided in the invocation payload, merge that list into the reconciliation source of truth and prioritize verbatim prompt text from that payload list.
-4. Ask-mode turns are especially likely to be missing because Copilot cannot invoke subagents in Ask mode, so caller-provided recent turns should be treated as authoritative when present.
-5. For each caller-provided turn absent from `JOURNAL.md` within the reconciliation window, prepend a missing-entry log using the provided mode label and prompt text.
-6. Identify missing interactions within this bounded window.
-7. Prepend missing entries first (newest missing to oldest missing).
-8. Prepend current interaction last (newest overall).
-9. Confirm reverse-chronological ordering.
-
-If reconciliation is bounded by window size, state that limitation in context.
-
-## Timestamp Requirements
-
-- Generate and validate timestamp in a single step immediately before write:
-`date "+%m-%d-%Y %H:%M"`
-- Required format: `MM-DD-YYYY HH:MM` (24-hour clock)
-- Inline validation regex: `^[0-1][0-9]-[0-3][0-9]-[0-9]{4} [0-2][0-9]:[0-5][0-9]$`
-- If the output does not match, regenerate once and use the result directly — no separate validation step.
+## Silent Operation
+- Operate silently by default.
+- Do not generate user-facing narration that announces you are about to write a journal entry or that you have written one.
+- Only surface logging details if the user explicitly asks about the journal, or if logging fails and the failure needs to be reported.
 
 ## User Field Normalization
 
@@ -92,54 +25,58 @@ One-time normalization rule:
 - Otherwise use `$USER` as the final fallback.
 - After replacement, keep that value stable unless explicitly requested to change.
 
-## CoPilot Mode Source of Truth
 
-Use the actual current UI/runtime mode for **CoPilot Mode** in the entry template.
-
-- Do not infer mode from task type.
-- Do not copy stale mode from previous entries.
-- If the current session is in Agent mode, log `Agent`.
-- If mode is uncertain, resolve from visible session context before writing.
-- When mode/model/socratic fields are explicitly passed in the invocation payload, prefer those field values.
-- During reconciliation backfill, mode is per-interaction: use the mode from each `Recent User Turns` item when present.
-- Never overwrite a backfilled Ask/Plan/Edit turn to `Agent` just because the current request is in Agent mode.
-
-## Backfill Mode Mapping (Mandatory)
-
-When creating missing entries from `Recent User Turns`:
-1. Parse each line as `- [<Mode>] <Prompt>`.
-2. Use `<Mode>` exactly as the entry's `CoPilot Mode`.
-3. Keep the current interaction's mode independent from backfilled interactions.
-4. If `<Mode>` is missing/invalid, skip that backfill item and report it in context as `mode-unresolved`.
-
-## Prepend Gate (fail-fast order — exit immediately on first failure)
-
-1. **Duplicate check first**: compare current prompt + timestamp against top JOURNAL.md entry. If duplicate, stop.
-2. Timestamp generated and validated inline from system command.
-3. Date includes both date and time.
-4. Reconciliation completed (or skipped via fast-path).
-5. New entry is prepended at top.
-6. No extra confirmation-only agent request was launched.
-7. Update session memory: set `last_logged_turn = current_turn`.
-
-## Field Extraction Order
-
-Before duplicate checks or reconciliation comparisons:
-1. Extract `User Prompt:` from the invocation payload.
-2. Extract metadata fields from the invocation payload when present.
-3. Use the extracted `User Prompt:` as the prompt text for duplicate checks, reconciliation, and the final journal entry.
-
-## Required Entry Template
+Example format:
 
 ```md
 ### **New Interaction**
 - **Agent Version**: [Agent Version]
-- **Date**: [MM-DD-YYYY HH:MM]
-- **User**: [git/github user identifier]
-- **Prompt**: [strictly verbatim user prompt. Do not truncate or summarize.]
+- **Date**: [DD-MM-YYYY HH:MM]
+- **User**: [User as defined in normalization rules]
+- **Prompt**: [strictly verbatim raw user prompt. Do not truncate or summarize.]
 - **CoPilot Mode**: [Ask|Plan|Edit|Agent]
 - **CoPilot Model**: [actual runtime model name]
 - **Socratic Mode**: [ON|OFF]
 - **Changes Made**: [concise summary]
 - **Context and Reasons for Changes**: [concise context/reasoning]
+
 ```
+
+Ensure that the JOURNAL.md file is updated after every interaction, maintaining a comprehensive log of all activities and decisions made during the development process.
+
+New entries are **appended at the end** of the file. The journal is in chronological order, oldest first. Do not read the existing file content or rewrite it — use the `execute` tool to append the new entry with a shell redirect (`>>`) for maximum efficiency.
+
+## Safeguards Against Corruption
+
+**UTF-8 Encoding**
+- Always open JOURNAL.md with explicit UTF-8 encoding: use `open(path, 'a', encoding='utf-8')` in Python or specify encoding in shell tools
+- Never rely on system default encoding — explicit UTF-8 is mandatory
+- If handling bytes, use `.encode('utf-8')` and `.decode('utf-8')` explicitly
+
+**Pre-flight Validation**
+Before appending, validate that the new entry content:
+- Does NOT contain single characters separated by spaces (pattern `X X X` is a corruption signal)
+- Does NOT have unusual spacing patterns like `* * ` or ` - ` at unusual positions
+- If detected, reject the write, report the corruption to the user, and do not append
+
+**Safe String Operations**
+- Use string concatenation (e.g., `string_a + string_b`), NEVER use `' '.join(chars)` on character lists
+- For multi-line content, use `'\n'.join(lines)` not character-by-character iteration
+- Never iterate through strings character-by-character for output generation
+
+**Append-Only Pattern**
+- Read the file once at the start (ONLY if validation logic requires it)
+- Build the new entry in memory as a complete string
+- Append once to disk using shell redirect (`>>`) or file mode `'a'` with a single `.write()` call
+- Do NOT read back and rewrite — this prevents cascading corruption from multiple passes
+
+**Post-Write Integrity Check**
+- After appending, read the last 5 lines of JOURNAL.md
+- Verify newlines are literal `\n` (not escaped or corrupted)
+- Verify markdown formatting (`###`, `**`, `-`) is intact and not space-separated
+- If corruption detected, alert the user immediately and provide the corrupted content for manual repair
+
+**Error Handling**
+- If any validation step fails, do not proceed with the append
+- Report exact error to the user with the offending content
+- Suggest manual fix or rollback steps if available

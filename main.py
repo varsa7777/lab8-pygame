@@ -2,12 +2,13 @@ import random
 import pygame
 from dataclasses import dataclass
 from typing import List, Tuple
+import math
 
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
 MIN_SQUARE_SIZE = 20
 MAX_SQUARE_SIZE = 60
-SQUARE_COUNT = 100
+SQUARE_COUNT = 20
 FPS = 60
 
 @dataclass
@@ -45,8 +46,34 @@ def handle_events() -> bool:
 
 def update_squares(squares: List[Square]) -> None:
     for square in squares:
+        # Find closest bigger square within 100 pixels
+        min_dist = float('inf')
+        closest = None
+        for other in squares:
+            if other != square and other.rect.size[0] > square.rect.size[0]:
+                dx = square.rect.centerx - other.rect.centerx
+                dy = square.rect.centery - other.rect.centery
+                dist = math.hypot(dx, dy)
+                if dist < min_dist:
+                    min_dist = dist
+                    closest = other
+        
+        # If there's a close bigger square, flee from it
+        if closest and min_dist < 100:
+            dx = square.rect.centerx - closest.rect.centerx
+            dy = square.rect.centery - closest.rect.centery
+            dist = math.hypot(dx, dy)
+            if dist > 0:
+                unit_dx = dx / dist
+                unit_dy = dy / dist
+                current_speed = math.hypot(square.velocity[0], square.velocity[1])
+                square.velocity = (unit_dx * current_speed, unit_dy * current_speed)
+        
         square.rect.x += square.velocity[0]
         square.rect.y += square.velocity[1]
+
+        square.rect.x += random.randint(-1, 1)
+        square.rect.y += random.randint(-1, 1)
 
         if square.rect.left < 0 or square.rect.right > SCREEN_WIDTH:
             square.velocity = (-square.velocity[0], square.velocity[1])
