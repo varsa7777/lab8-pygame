@@ -7,7 +7,7 @@ import math
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
 MIN_SQUARE_SIZE = 20
-MAX_SQUARE_SIZE = 60
+MAX_SQUARE_SIZE = 100
 SQUARE_COUNT = 20
 FPS = 60
 
@@ -102,8 +102,12 @@ def update_squares(squares: List[Square]) -> None:
                     continue
                 if check_collision(a, b):
                     if a.rect.size[0] > b.rect.size[0]:
+                        if a.rect.size[0] < MAX_SQUARE_SIZE:
+                            a.rect.size = a.rect.size[0] + b.rect.size[0]/3, a.rect.size[0] + b.rect.size[0]/3
                         eaten.add(j)
                     elif b.rect.size[0] > a.rect.size[0]:
+                        if b.rect.size[0] < MAX_SQUARE_SIZE:
+                            b.rect.size = b.rect.size[0] + a.rect.size[0]/3, b.rect.size[0] + a.rect.size[0]/3
                         eaten.add(i)
         
         for i in eaten:
