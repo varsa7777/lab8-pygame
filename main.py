@@ -110,6 +110,8 @@ def draw_squares(screen: pygame.Surface, squares: List[Square]) -> None:
         pygame.draw.rect(screen, (255, 255, 255), square.rect)
     pygame.display.flip()
 
+def check_collision(a: Square, b:Square) -> bool:
+    return a.collideRect(b)
 
 def main() -> None:
     screen = initialize_pygame()
